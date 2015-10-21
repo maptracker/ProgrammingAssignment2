@@ -4,7 +4,6 @@
 ## "Programming Assignment 2" from the Johns Hopkins "R Programming"
 ## Coursera course. The code below is mostly following the paradigm
 ## laid out by Dr. Peng's vector-mean-caching example:
-
 ## https://github.com/rdpeng/ProgrammingAssignment2
 
 # I am putting function comments inside the function block.
@@ -12,20 +11,21 @@
 
 # Usage:
 #
-#   source("cachematrix.R")
-#   Make a 5 x 5 random matrix:
+#   # You can source the current version of this file directly from GitHub:
+#   source("https://github.com/maptracker/ProgrammingAssignment2/raw/master/cachematrix.R")
+#
+#   # Make a 5 x 5 random matrix:
 #   myMat <- makeCacheMatrix( randomMatrix( rows = 5 ) )
 #   cacheSolve( myMat ) # calculate, cache, and retrive inversion
 #   cacheSolve( myMat ) # retrieve cached inversion
 
 # Alternate usage:
 #
-#   source("cachematrix.R")
-#   Make a 1000 x 1000 random matrix:
-#   myMat <- makeCacheMatrix( randomMatrix( rows = 1000 ) )
-#   str( myMat$inversion() ) # calculate and cache inversion, then summarize
-#   str( myMat$inversion() ) # Summarize cached inversion
-#   myMat$checkInversion()   # Verify that our inversion is correct
+#   # Make a 1000 x 1000 random matrix:
+#   bigMat <- makeCacheMatrix( randomMatrix( rows = 1000 ) )
+#   str( bigMat$inversion() ) # calculate and cache inversion, then summarize
+#   str( bigMat$inversion() ) # Summarize cached inversion
+#   bigMat$checkInversion()   # Verify that our inversion is correct
 
 makeCacheMatrix <- function( x = matrix() ) {
     # Defines an object holding a matrix and its cached inversion
@@ -68,8 +68,10 @@ makeCacheMatrix <- function( x = matrix() ) {
         # I think this is a better caching paradigm to what is
         # described in the exercise. This object already has
         # everything it needs to internally perform an inversion, and
-        # then cache the result
-        action <- "recover"
+        # then cache the result. It seems "cleaner" to do this here,
+        # inside the object itself, rather than define an external
+        # function to do the job.
+        action <- "recover cached"
         start <- Sys.time()
         if (is.null(invCache)) {
             # The cache has not been set. Create and return it
@@ -88,7 +90,7 @@ makeCacheMatrix <- function( x = matrix() ) {
         orig  <- getMatrix() # The original (stored) matrix
         inv   <- inversion() # The inversion of it
         
-        # An "pure" identity matrix of the appropriate size:
+        # An "pure" (0 + 1) identity matrix of the appropriate size:
         identMat <- diag(nrow = nrow(orig), ncol = ncol(orig))
         # The "real" identity matrix when doing the matrix multiplication:
         print("Multiplying your matrix by the inversion...")
@@ -104,8 +106,10 @@ makeCacheMatrix <- function( x = matrix() ) {
         # Use all.equal(), which has a default "tolerance" of ~1.5e-8
         isOk <- all.equal(identMat, identChk)
         msg <- if (isOk) { "equals" } else { "does NOT equal" }
-        
+
+        # Report the findings:
         print(sprintf("x %%*%% inversion %s identity matrix", msg))
+        # Return the boolean flag:
         isOk
     }
     
@@ -114,7 +118,7 @@ makeCacheMatrix <- function( x = matrix() ) {
         # redefinable. A better appraoch would be to just make a new
         # matrix object with makeCacheMatrix(), but we will implement
         # the feature as requested
-        x <<- newMatrix
+        x <<- newMatrix # Again, <<- to break out of setMatrix()'s scope
         # Need to clear any previously-set cache! Otherwise you will
         # return the inverse of the *old* matrix.
         invCache <<- NULL
@@ -150,6 +154,13 @@ cacheSolve <- function(x, ...) {
     # already have this value, it will create and store it. Note that
     # running x$inverse() is a more elegant way to do this.
 
+    if (!inherits(x,"CachedMatrix")) {
+        # Sanity check to make sure the object is what we think it is
+        print("Passed argument is not recognized! You passed:")
+        str(x)
+        return(NA)
+    }
+    
     rv <- x$getInversion()
     if (is.null(rv)) {
         # The inversion has not yet been calculated
